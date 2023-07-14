@@ -1,0 +1,46 @@
+version: '3.7'
+
+services:
+  redis:
+    image: redis:7
+    container_name: notifications-redis
+
+  beat:
+    build: .
+    env_file:
+      - ./.env
+    container_name: notifications-beat
+    command: [ "/app/celery.sh", "beat" ]
+    depends_on:
+      - redis
+
+  celery:
+    build: .
+    env_file:
+      - ./.env
+    container_name: notifications-celery
+    command: [ "/app/celery.sh", "celery" ]
+    depends_on:
+      - redis
+
+  bot:
+    build: .
+    env_file:
+      - ./.env
+    container_name: notifications-bot
+    command: python bot.py
+    depends_on:
+      - celery
+      - beat
+
+  flower:
+    build: .
+    env_file:
+      - ./.env
+    container_name: notifications-flower
+    command: [ "/app/celery.sh", "flower" ]
+    depends_on:
+      - redis
+      - celery
+    ports:
+      - 5555:5555
